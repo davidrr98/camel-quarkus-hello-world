@@ -1,0 +1,32 @@
+- route:
+    id: hello-world
+    from:
+      id: from-993d
+      uri: platform-http
+      parameters:
+        path: /hello-world
+      steps:
+        - setHeader:
+            id: setHeader-ed79
+            name: Content-Type
+            expression:
+              constant:
+                id: constant-2c9a
+                expression: application/json
+        - setHeader:
+            id: setHeader-3722
+            name: instanceId
+            expression:
+              simple:
+                id: simple-4c7f
+                expression: ${hostname}
+        - setBody:
+            id: setBody-33ec
+            expression:
+              simple:
+                id: simple-f62c
+                expression: |-
+                  {
+                  "status": "OK",
+                   "instance": "${header.instanceId}"
+                  }
