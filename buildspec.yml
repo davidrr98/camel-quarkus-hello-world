@@ -1,33 +1,40 @@
 version: 0.2
 
+env:
+  variables:
+    ECR_REPO: "637423634078.dkr.ecr.us-east-1.amazonaws.com/poc-davivienda-camel/quarkus-native-app"
+    IMAGE_TAG: "latest"
+
 phases:
   install:
     runtime-versions:
-      java: corretto17
+      docker: 20
     commands:
-      - echo "Installing dependencies"
-      - curl -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-22.3.0/graalvm-ce-java17-linux-amd64.tar.gz | tar xz
-      - export GRAALVM_HOME=$(pwd)/graalvm-ce-java17-22.3.0
-      - export PATH=$GRAALVM_HOME/bin:$PATH
+      - echo "Instalando GraalVM para Java 21..."
+      - curl -LO https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-21.0.2/graalvm-community-jdk-21.0.2_linux-x64_bin.tar.gz
+      - tar -xzf graalvm-community-jdk-21.0.2_linux-x64_bin.tar.gz
+      - export JAVA_HOME=$PWD/graalvm-community-openjdk-21.0.2
+      - export PATH=$JAVA_HOME/bin:$PATH
+      - java -version
       - gu install native-image
 
   pre_build:
     commands:
-      - echo Logging in to Amazon ECR...
+      - echo "Logueando con ECR..."
       - aws --version
-      - $(aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin 637423634078.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com)
-      - REPO_URI=637423634078.dkr.ecr.us-east-1.amazonaws.com/poc-davivienda-camel/quarkus-native-app
+      - $(aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REPO | cut -d/ -f1,2)
+      - echo "Compilando aplicación Quarkus en modo nativo..."
 
   build:
     commands:
-      - echo "Building native image with Quarkus"
-      - ./mvnw clean install -Dnative -Dquarkus.native.container-build=true
-      - docker build -f src/main/docker/Dockerfile.native -t $REPO_URI:latest .
+      - ./mvnw clean package -Pnative -Dquarkus.native.container-build=true
+      - echo "Construyendo imagen Docker..."
+      - docker build -f src/main/docker/Dockerfile.native -t $ECR_REPO:$IMAGE_TAG .
 
   post_build:
     commands:
-      - echo "Pushing image to ECR"
-      - docker push $REPO_URI:latest
+      - echo "Subiendo imagen a ECR..."
+      - docker push $ECR_REPO:$IMAGE_TAG
 
 artifacts:
   files:
