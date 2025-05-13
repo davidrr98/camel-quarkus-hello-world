@@ -7,8 +7,6 @@ env:
 
 phases:
   install:
-    runtime-versions:
-      docker: 20
     commands:
       - echo "Instalando GraalVM para Java 21..."
       - curl -LO https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-21.0.2/graalvm-community-jdk-21.0.2_linux-x64_bin.tar.gz
@@ -21,9 +19,7 @@ phases:
   pre_build:
     commands:
       - echo "Logueando con ECR..."
-      - aws --version
-      - $(aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REPO | cut -d/ -f1,2)
-      - echo "Compilando aplicación Quarkus en modo nativo..."
+      - $(aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REPO)
 
   build:
     commands:
