@@ -1,0 +1,34 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto17
+    commands:
+      - echo "Installing dependencies"
+      - curl -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-22.3.0/graalvm-ce-java17-linux-amd64.tar.gz | tar xz
+      - export GRAALVM_HOME=$(pwd)/graalvm-ce-java17-22.3.0
+      - export PATH=$GRAALVM_HOME/bin:$PATH
+      - gu install native-image
+
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - $(aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin 637423634078.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com)
+      - REPO_URI=637423634078.dkr.ecr.us-east-1.amazonaws.com/poc-davivienda-camel/quarkus-native-app
+
+  build:
+    commands:
+      - echo "Building native image with Quarkus"
+      - ./mvnw clean install -Dnative -Dquarkus.native.container-build=true
+      - docker build -f src/main/docker/Dockerfile.native -t $REPO_URI:latest .
+
+  post_build:
+    commands:
+      - echo "Pushing image to ECR"
+      - docker push $REPO_URI:latest
+
+artifacts:
+  files:
+    - target/*
